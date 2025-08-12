@@ -1,0 +1,22 @@
+{
+  "high_impact_keywords": {
+    "major_partnerships": ["partnership", "collaboration", "integrate", "alliance"],
+    "major_launches": ["launch", "mainnet", "release", "deploy", "live"],
+    "major_rewards": ["rewards", "airdrop", "incentive", "staking"],
+    "milestones": ["milestone", "upgrade", "listing", "exchange"],
+    "strategic_shifts": ["strategic", "roadmap", "vision", "future"]
+  },
+  "low_impact_keywords": ["ama", "meme", "gm", "gn", "thread", "reminder"],
+  "excitement_indicators": ["🚀", "🔥", "⚡", "breaking", "major", "huge"],
+  "thresholds": {
+    "high_impact_threshold": 7,
+    "engagement_weight": 150,
+    "category_score": 3,
+    "excitement_bonus": 1,
+    "low_impact_penalty": 2
+  },
+  "trading_params": {
+    "position_size_usdt": 1000,
+    "hold_duration_minutes": 30
+  }
+}

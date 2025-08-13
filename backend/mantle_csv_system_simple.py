@@ -200,30 +200,50 @@ class TradingSimulator:
         
         return round(buy_price, 4), round(sell_price, 4), round(pnl, 2)
     
+    def parse_timestamp(self, timestamp_str: str) -> datetime:
+        """Parse timestamp from various formats."""
+        if not timestamp_str:
+            return datetime.now()
+            
+        try:
+            # Try Twitter format first: "Tue Aug 12 05:00:17 +0000 2025"
+            return datetime.strptime(timestamp_str, "%a %b %d %H:%M:%S %z %Y")
+        except ValueError:
+            try:
+                # Try ISO format with Z: "2025-08-12T05:00:17.000Z"
+                if timestamp_str.endswith('Z'):
+                    return datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                else:
+                    # Try regular ISO format: "2025-08-12T05:00:17+00:00"
+                    return datetime.fromisoformat(timestamp_str)
+            except ValueError:
+                try:
+                    # Try ISO without timezone: "2025-08-12T05:00:17"
+                    return datetime.fromisoformat(timestamp_str)
+                except ValueError:
+                    # Fallback to current time
+                    logger.warning(f"Could not parse timestamp: {timestamp_str}")
+                    return datetime.now()
+    
     def generate_price(self, timestamp_str: str) -> float:
         """Generate realistic sample price based on timestamp."""
-        if timestamp_str.endswith('Z'):
-            dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-        else:
-            dt = datetime.fromisoformat(timestamp_str)
+        dt = self.parse_timestamp(timestamp_str)
         
         # Simple price simulation around $0.60 base
         day_offset = (dt - datetime(2024, 8, 10, tzinfo=dt.tzinfo)).days
         hour_factor = dt.hour / 24.0
+        minute_factor = dt.minute / 60.0
         
         base_price = 0.60
         daily_variation = (day_offset % 10 - 5) * 0.02
         hourly_variation = (hour_factor - 0.5) * 0.01
+        minute_variation = (minute_factor - 0.5) * 0.005  # Small random variation
         
-        return max(0.30, min(1.00, base_price + daily_variation + hourly_variation))
+        return max(0.30, min(1.00, base_price + daily_variation + hourly_variation + minute_variation))
     
     def add_minutes(self, timestamp_str: str, minutes: int) -> str:
         """Add minutes to timestamp string."""
-        if timestamp_str.endswith('Z'):
-            dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-        else:
-            dt = datetime.fromisoformat(timestamp_str)
-        
+        dt = self.parse_timestamp(timestamp_str)
         new_dt = dt + timedelta(minutes=minutes)
         return new_dt.isoformat()
 
@@ -277,6 +297,45 @@ class MantleTradingSystem:
             
         except Exception as e:
             logger.error(f"Error loading raw CSV: {e}")
+            return None
+    
+    def load_processed_csv_data(self, filename: str) -> Optional[List[Dict]]:
+        """Load data from a processed CSV file."""
+        processed_dir = '../data/processed'
+        filepath = os.path.join(processed_dir, filename)
+        
+        if not os.path.exists(filepath):
+            logger.error(f"Processed file not found: {filepath}")
+            return None
+            
+        logger.info(f"Loading processed data from: {filepath}")
+        
+        try:
+            posts = []
+            with open(filepath, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    # Convert processed CSV row to post format
+                    # Processed CSV has: tweet_id, timestamp, text
+                    post = {
+                        'timestamp': row['timestamp'],  # Use timestamp from processed CSV
+                        'created_at': row['timestamp'],  # Also add created_at for compatibility
+                        'text': row['text'],
+                        'content': row['text'],
+                        'engagement': {
+                            'likes': 0,  # Processed CSV doesn't have engagement data
+                            'retweets': 0,
+                            'replies': 0,
+                            'quotes': 0
+                        }
+                    }
+                    posts.append(post)
+            
+            logger.info(f"Loaded {len(posts)} posts from processed CSV")
+            return posts
+            
+        except Exception as e:
+            logger.error(f"Error loading processed CSV: {e}")
             return None
     
     def get_sample_posts(self) -> List[Dict]:
@@ -343,13 +402,22 @@ class MantleTradingSystem:
         
         return evaluations
     
-    def run_analysis(self):
+    def run_analysis(self, processed_file=None):
         """Run the complete analysis and save to CSV."""
         logger.info("Starting Mantle Trading Strategy Analysis")
         
         # Get posts (in future, this will be from X API)
-        # Try to load real data first, fall back to sample if not found
-        posts = self.load_raw_csv_data() or self.get_sample_posts()
+        if processed_file:
+            # Load from specified processed file
+            posts = self.load_processed_csv_data(processed_file)
+        else:
+            # Try to load real data first, fall back to sample if not found
+            posts = self.load_raw_csv_data() or self.get_sample_posts()
+        
+        if not posts:
+            logger.error("No posts found to analyze")
+            return
+            
         logger.info(f"Processing {len(posts)} posts")
         
         # Process posts
@@ -377,8 +445,15 @@ class MantleTradingSystem:
 
 def main():
     """Main execution function."""
+    import sys
+    
+    # Check if processed file is provided as argument
+    processed_file = None
+    if len(sys.argv) > 1:
+        processed_file = sys.argv[1]
+    
     system = MantleTradingSystem()
-    system.run_analysis()
+    system.run_analysis(processed_file)
 
 if __name__ == "__main__":
     main()

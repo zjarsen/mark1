@@ -534,6 +534,7 @@
         <!-- Navigation Tabs -->
         <div class="nav-tabs">
             <button class="nav-tab active" onclick="switchTab(event, 'data-pull-tab')">📥 Data Pull</button>
+            <button class="nav-tab" onclick="switchTab(event, 'data-processing-tab')">⚙️ Data Processing</button>
             <button class="nav-tab" onclick="switchTab(event, 'criteria-tab')">📝 Evaluation Criteria</button>
             <button class="nav-tab" onclick="switchTab(event, 'results-tab')">📊 Results</button>
             <button class="nav-tab" onclick="switchTab(event, 'trades-tab')">💼 Trades</button>
@@ -547,11 +548,6 @@
                 <div class="criteria-title">
                     🎯 Data Source Selection
                 </div>
-                <div class="alert alert-info">
-                    <strong>X.com Official API Integration:</strong> Configure your data pull parameters below. 
-                    Make sure you have TWITTER_BEARER_TOKEN set in your environment variables.
-                    <br><strong>Get your Bearer Token from:</strong> <a href="https://developer.twitter.com/en/portal/dashboard" target="_blank" style="color: #2196F3;">https://developer.twitter.com/en/portal/dashboard</a>
-                </div>
                 
                 <div class="selection-grid">
                     <div class="selection-item">
@@ -563,22 +559,14 @@
                     </div>
                     
                     <div class="selection-item">
-                        <label for="start-date"><strong>Start Date:</strong></label>
-                        <input type="date" id="start-date" class="form-control" value="2024-01-01">
-                    </div>
-                    
-                    <div class="selection-item">
-                        <label for="end-date"><strong>End Date:</strong></label>
-                        <input type="date" id="end-date" class="form-control">
+                        <label for="start-date"><strong>Start Date (pull all tweets since):</strong></label>
+                        <input type="date" id="start-date" class="form-control" value="2025-08-03">
                     </div>
                 </div>
                 
                 <div class="button-group" style="margin-top: 20px;">
                     <button class="btn btn-primary btn-large" onclick="startDataPull()">
                         🚀 Confirm & Start Data Pull
-                    </button>
-                    <button class="btn btn-warning" onclick="checkAPIStatus()">
-                        🔍 Check API Status
                     </button>
                 </div>
             </div>
@@ -606,8 +594,8 @@
                         <span class="stat-value" id="api-calls">0</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">Estimated Time:</span>
-                        <span class="stat-value" id="eta">Calculating...</span>
+                        <span class="stat-label">Current Tweet Date:</span>
+                        <span class="stat-value" id="current-date">Calculating...</span>
                     </div>
                     <div class="stat-item">
                         <span class="stat-label">Current Status:</span>
@@ -618,6 +606,9 @@
                 <div class="button-group" style="margin-top: 15px;">
                     <button class="btn btn-warning" onclick="cancelDataPull()" id="cancel-btn">
                         ⏹️ Cancel Download
+                    </button>
+                    <button class="btn btn-info" onclick="refreshDataPullStatus()" id="refresh-btn">
+                        🔄 Refresh Status
                     </button>
                 </div>
             </div>
@@ -644,10 +635,112 @@
                     </button>
                 </div>
             </div>
+            
+        </div>
+        
+        <!-- Data Processing Tab -->
+        <div id="data-processing-tab" class="tab-content">
+            <!-- Data Processing Section -->
+            <div class="criteria-section">
+                <div class="criteria-title">
+                    ⚙️ Data Processing
+                </div>
+                
+                <div class="alert alert-info">
+                    <strong>Thread Consolidation:</strong> Select a raw CSV file to identify and consolidate tweet threads into single posts.
+                    The processed file will contain 3 columns: tweet_id, timestamp, text.
+                </div>
+                
+                <div class="selection-grid">
+                    <div class="selection-item">
+                        <label for="raw-file-select"><strong>Select Raw CSV File:</strong></label>
+                        <select id="raw-file-select" class="form-control">
+                            <option value="">-- Select a file --</option>
+                        </select>
+                        <button class="btn btn-secondary" onclick="refreshRawFiles()" style="margin-top: 10px;">
+                            🔄 Refresh File List
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="button-group" style="margin-top: 20px;">
+                    <button class="btn btn-success" onclick="startProcessing()" id="process-start-btn">
+                        🔄 Process & Consolidate Threads
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Processing Progress Section -->
+            <div class="criteria-section" id="processing-progress-section" style="display: none;">
+                <div class="criteria-title">
+                    📊 Processing Progress
+                </div>
+                
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="processing-progress-fill"></div>
+                    </div>
+                    <div class="progress-text" id="processing-progress-text">Initializing...</div>
+                </div>
+                
+                <div class="progress-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Threads Detected:</span>
+                        <span class="stat-value" id="threads-detected">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Posts Consolidated:</span>
+                        <span class="stat-value" id="posts-consolidated">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Processing Status:</span>
+                        <span class="stat-value" id="processing-status">Ready</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Processing Results Section -->
+            <div class="criteria-section" id="processing-results-section" style="display: none;">
+                <div class="criteria-title">
+                    📋 Processing Results
+                </div>
+                
+                <div id="processing-results-content">
+                    <!-- Results will be populated by JavaScript -->
+                </div>
+            </div>
         </div>
         
         <!-- Criteria Tab -->
         <div id="criteria-tab" class="tab-content">
+            <!-- Data Source Selection -->
+            <div class="criteria-section">
+                <div class="criteria-title">
+                    🎯 Analysis Data Source
+                </div>
+                <div class="selection-grid">
+                    <div class="selection-item">
+                        <label for="analysis-token-select"><strong>Token Selection:</strong></label>
+                        <select id="analysis-token-select" class="form-control">
+                            <option value="mantle">Mantle (MNT)</option>
+                            <!-- Future tokens can be added here -->
+                        </select>
+                    </div>
+                    
+                    <div class="selection-item">
+                        <label for="processed-file-select"><strong>Processed CSV File:</strong></label>
+                        <select id="processed-file-select" class="form-control">
+                            <option value="">Select a processed file...</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="button-group" style="margin-top: 15px;">
+                    <button class="btn btn-secondary" onclick="refreshProcessedFiles()">🔄 Refresh Files</button>
+                </div>
+                <div id="file-selection-status"></div>
+            </div>
+            
             <div class="criteria-section">
                 <div class="criteria-title">
                     ⚙️ Evaluation Criteria Configuration
@@ -753,6 +846,8 @@
         // Global variables
         let currentCriteria = {};
         let currentResults = [];
+        let currentTrades = [];
+        let currentStats = {};
         
         // Global variables for data pull
         let dataPullInProgress = false;
@@ -763,6 +858,7 @@
             loadCriteria();
             loadResults();
             initializeDataPull();
+            initializeDataProcessing();
         });
         
         // Initialize data pull tab
@@ -853,104 +949,176 @@
         // Show status messages
         function showStatus(elementId, message, type) {
             const statusDiv = document.getElementById(elementId);
-            statusDiv.innerHTML = `<div class="alert alert-${type}" style="margin-top: 15px;">${message}</div>`;
-            setTimeout(() => {
-                statusDiv.innerHTML = '';
-            }, 5000);
+            
+            // Clear any existing timers for this element
+            if (statusDiv.clearTimer) {
+                clearTimeout(statusDiv.clearTimer);
+                statusDiv.clearTimer = null;
+            }
+            
+            // For success messages, make them persistent with a close button
+            if (type === 'success') {
+                statusDiv.innerHTML = `
+                    <div class="alert alert-${type}" style="margin-top: 15px;">
+                        <button type="button" class="close" onclick="this.parentElement.style.display='none'" style="float: right; background: none; border: none; font-size: 20px; cursor: pointer;">&times;</button>
+                        ${message}
+                    </div>`;
+                // Mark this element as having a persistent message
+                statusDiv.isPersistent = true;
+            } else {
+                statusDiv.innerHTML = `<div class="alert alert-${type}" style="margin-top: 15px;">${message}</div>`;
+                statusDiv.isPersistent = false;
+                
+                // Auto-clear non-success messages
+                let timeout = 5000; // Default 5 seconds
+                if (type === 'danger') {
+                    timeout = 10000; // Error messages stay for 10 seconds
+                }
+                
+                statusDiv.clearTimer = setTimeout(() => {
+                    // Only clear if this element doesn't have a persistent message now
+                    if (!statusDiv.isPersistent) {
+                        statusDiv.innerHTML = '';
+                    }
+                }, timeout);
+            }
         }
         
         // Simulate running analysis
-        function runAnalysis() {
-            showStatus('system-status', 'Analysis running... This would execute the Python script with current criteria. 🚀', 'info');
-            // In real implementation, this would call the Python script
-            setTimeout(() => {
-                showStatus('system-status', 'Analysis complete! Results updated in CSV file. 📊', 'success');
-                loadResults();
-            }, 2000);
+        async function runAnalysis() {
+            const selectedFile = document.getElementById('processed-file-select').value;
+            const selectedToken = document.getElementById('analysis-token-select').value;
+            
+            if (!selectedFile) {
+                showStatus('system-status', 'Please select a processed CSV file to analyze.', 'warning');
+                return;
+            }
+            
+            showStatus('system-status', 'Analysis running... 🚀', 'info');
+            
+            try {
+                const response = await fetch('http://localhost:5000/api/run-analysis', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        processed_file: selectedFile,
+                        token: selectedToken
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const stats = result.stats || {};
+                    const statusMsg = `Analysis complete! 📊<br>
+                        • Total Posts: ${stats.total_posts || 'N/A'}<br>
+                        • Qualified Posts: ${stats.qualified_posts || 'N/A'}<br>
+                        • Qualification Rate: ${stats.qualification_rate || 'N/A'}%<br>
+                        • Total P&L: $${stats.total_pnl || 'N/A'}<br>
+                        • Average Score: ${stats.average_score || 'N/A'}/10`;
+                    
+                    showStatus('system-status', statusMsg, 'success');
+                    // Delay loadResults to avoid interfering with status message
+                    setTimeout(() => {
+                        loadResults(); // Refresh results display
+                    }, 100);
+                } else {
+                    showStatus('system-status', `Analysis failed: ${result.error}`, 'danger');
+                }
+            } catch (error) {
+                console.error('Error running analysis:', error);
+                showStatus('system-status', `Error running analysis: ${error.message}`, 'danger');
+            }
         }
         
-        // Load results from CSV data (simulated)
-        function loadResults() {
-            // Simulate CSV data loading
-            currentResults = [
-                {
-                    timestamp: '2024-08-10T10:30:00Z',
-                    post_id: '1',
-                    content: '🚀 Major partnership announcement with leading DeFi protocol! Mantle Network integration brings new opportunities for yield farming and liquidity provision. #MantleNetwork #DeFi',
-                    engagement_likes: 450,
-                    engagement_retweets: 120,
-                    evaluation_reasoning: 'Categories: [major_partnerships, strategic_shifts], Engagement: 450L/120RT, Excitement: +1',
-                    impact_score: 10,
-                    trade_executed: true,
-                    buy_price: 0.4992,
-                    sell_price: 0.4996,
-                    pnl: 0.83
-                },
-                {
-                    timestamp: '2024-08-10T14:15:00Z',
-                    post_id: '2',
-                    content: 'GM Mantle fam! 🌅 Another beautiful day in the ecosystem. Remember to check out our latest blog post!',
-                    engagement_likes: 85,
-                    engagement_retweets: 12,
-                    evaluation_reasoning: 'Categories: [], Engagement: 85L/12RT, Excitement: +0, Penalty: -2',
-                    impact_score: 1,
-                    trade_executed: false,
-                    buy_price: null,
-                    sell_price: null,
-                    pnl: null
-                },
-                {
-                    timestamp: '2024-08-11T09:45:00Z',
-                    post_id: '3',
-                    content: '🎉 MILESTONE ACHIEVED! Mantle Network surpasses $100M in TVL! Thank you to our amazing community. Major mainnet upgrade coming next week with enhanced security features.',
-                    engagement_likes: 890,
-                    engagement_retweets: 234,
-                    evaluation_reasoning: 'Categories: [major_launches, milestones], Engagement: 890L/234RT, Excitement: +1, Penalty: -2',
-                    impact_score: 9,
-                    trade_executed: true,
-                    buy_price: 0.5188,
-                    sell_price: 0.5192,
-                    pnl: 0.80
+        // Load results from actual analysis CSV data
+        async function loadResults() {
+            try {
+                const response = await fetch('http://localhost:5000/api/get-analysis-results');
+                const data = await response.json();
+                
+                if (data.error) {
+                    console.log('No analysis results found:', data.error);
+                    // Use empty arrays if no results
+                    currentResults = [];
+                    currentTrades = [];
+                    displayResults([]);
+                    displayTrades([]);
+                    return;
                 }
-            ];
-            
-            displayResults();
-            displayTrades();
-            generatePineScript();
+                
+                // Store the real data
+                currentResults = data.results || [];
+                currentTrades = data.trades || [];
+                currentStats = data.stats || {};
+                
+                // Update displays
+                displayResults(currentResults);
+                displayTrades(currentTrades);
+                
+                console.log(`Loaded ${currentResults.length} results and ${currentTrades.length} trades from analysis`);
+                
+            } catch (error) {
+                console.error('Error loading analysis results:', error);
+                // Fallback to empty data if API fails
+                currentResults = [];
+                currentTrades = [];
+                displayResults([]);
+                displayTrades([]);
+            }
         }
         
         // Display results in the results tab
-        function displayResults() {
+        function displayResults(results = null) {
+            const resultsToDisplay = results || currentResults;
+            
             document.getElementById('results-loading').style.display = 'none';
             document.getElementById('results-content').style.display = 'block';
             
-            // Calculate and display stats
-            const totalPosts = currentResults.length;
-            const qualifiedPosts = currentResults.filter(r => r.trade_executed).length;
-            const totalPnL = currentResults.reduce((sum, r) => sum + (r.pnl || 0), 0);
-            const avgScore = currentResults.reduce((sum, r) => sum + r.impact_score, 0) / totalPosts;
+            // Use stats from API if available, otherwise calculate
+            let stats;
+            if (currentStats && Object.keys(currentStats).length > 0) {
+                stats = currentStats;
+            } else {
+                // Calculate stats from results
+                const totalPosts = resultsToDisplay.length;
+                const qualifiedPosts = resultsToDisplay.filter(r => r.trade_executed).length;
+                const totalPnL = resultsToDisplay.reduce((sum, r) => sum + (r.pnl || 0), 0);
+                const avgScore = totalPosts > 0 ? resultsToDisplay.reduce((sum, r) => sum + r.impact_score, 0) / totalPosts : 0;
+                
+                stats = {
+                    total_posts: totalPosts,
+                    qualified_posts: qualifiedPosts,
+                    qualification_rate: totalPosts > 0 ? (qualifiedPosts / totalPosts * 100) : 0,
+                    total_pnl: totalPnL,
+                    average_score: avgScore
+                };
+            }
             
             document.getElementById('stats-grid').innerHTML = `
                 <div class="stat-card">
-                    <div class="stat-value">${totalPosts}</div>
+                    <div class="stat-value">${stats.total_posts}</div>
                     <div class="stat-label">Total Posts</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value positive">${qualifiedPosts}</div>
+                    <div class="stat-value positive">${stats.qualified_posts}</div>
                     <div class="stat-label">Qualified Posts</div>
                 </div>
-                <div class="stat-value positive">${totalPnL.toFixed(2)}</div>
-                    <div class="stat-label">Total P&L ($)</div>
+                <div class="stat-card">
+                    <div class="stat-value positive">$${stats.total_pnl.toFixed(2)}</div>
+                    <div class="stat-label">Total P&L</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">${avgScore.toFixed(1)}/10</div>
+                    <div class="stat-value">${stats.average_score.toFixed(1)}/10</div>
                     <div class="stat-label">Avg Score</div>
                 </div>
             `;
             
             // Display results table
             const tbody = document.getElementById('results-table');
-            tbody.innerHTML = currentResults.map(result => {
+            tbody.innerHTML = resultsToDisplay.map(result => {
                 const scoreClass = result.impact_score >= 7 ? 'score-high' : 
                                  result.impact_score >= 4 ? 'score-medium' : 'score-low';
                 const tradeClass = result.trade_executed ? 'trade-yes' : 'trade-no';
@@ -969,11 +1137,11 @@
         }
         
         // Display trades in the trades tab
-        function displayTrades() {
-            const trades = currentResults.filter(r => r.trade_executed);
+        function displayTrades(trades = null) {
+            const tradesToDisplay = trades || currentTrades || currentResults.filter(r => r.trade_executed);
             const tbody = document.getElementById('trades-table');
             
-            tbody.innerHTML = trades.map((trade, index) => {
+            tbody.innerHTML = tradesToDisplay.map((trade, index) => {
                 const returnPct = ((trade.sell_price - trade.buy_price) / trade.buy_price * 100).toFixed(2);
                 return `
                     <tr>
@@ -991,7 +1159,7 @@
         
         // Generate Pine Script based on current trades
         function generatePineScript() {
-            const trades = currentResults.filter(r => r.trade_executed);
+            const trades = currentTrades || currentResults.filter(r => r.trade_executed);
             
             if (trades.length === 0) {
                 document.getElementById('pine-script-code').textContent = '// No trades to visualize - run analysis first';
@@ -1063,46 +1231,273 @@ if barstate.islast
         
         // =============== DATA PULL FUNCTIONS ===============
         
-        // Check API status
-        function checkAPIStatus() {
-            // Simulate API status check
-            const hasToken = localStorage.getItem('TWITTERAPI_IO_KEY') || 
-                           prompt('Enter your X.com Bearer Token (will be stored locally):');
-            
-            if (hasToken) {
-                localStorage.setItem('TWITTERAPI_IO_KEY', hasToken);
-                alert('✅ X.com Bearer Token configured! Ready to fetch data.');
-            } else {
-                alert('❌ No API key provided. Please get one from https://twitterapi.io/dashboard');
+        // Check API status using real backend
+        async function checkAPIStatus() {
+            try {
+                const hasToken = localStorage.getItem('apiKey') || 
+                               prompt('Enter your TwitterAPI.io API Key (will be stored locally):');
+                
+                if (!hasToken) {
+                    alert('❌ No API key provided. Please get one from https://twitterapi.io/dashboard');
+                    return;
+                }
+                
+                // Test API key with backend
+                const response = await fetch('http://localhost:5000/api/check-api-key', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        api_key: hasToken
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.valid) {
+                    localStorage.setItem('apiKey', hasToken);
+                    alert('✅ TwitterAPI.io API Key is valid! Ready to fetch data.');
+                } else {
+                    alert(`❌ API Key validation failed: ${result.message}`);
+                }
+                
+            } catch (error) {
+                console.error('API status check failed:', error);
+                alert('❌ Could not connect to backend server. Make sure the API server is running on localhost:5000');
             }
         }
         
+        // Resume monitoring ongoing data pull
+        async function resumeMonitoring() {
+            try {
+                // Check if there's an ongoing process
+                const response = await fetch('http://localhost:5000/api/data-pull-status');
+                const status = await response.json();
+                
+                if (status.in_progress) {
+                    // There's an ongoing process - resume monitoring
+                    dataPullInProgress = true;
+                    showProgressSection();
+                    
+                    // Update current status
+                    updateProgress(status.progress || 50, status.status_text || 'Resuming monitoring...');
+                    document.getElementById('posts-downloaded').textContent = status.posts_downloaded || 0;
+                    document.getElementById('api-calls').textContent = status.api_calls || 0;
+                    document.getElementById('current-date').textContent = status.current_date || 'Calculating...';
+                    document.getElementById('current-status').textContent = status.status_text || 'Monitoring resumed';
+                    
+                    // Start polling for updates
+                    pollForUpdates();
+                    
+                    alert(`Resumed monitoring! Found ${status.posts_downloaded || 0} tweets so far.`);
+                } else {
+                    alert('No data pull currently in progress.');
+                }
+            } catch (error) {
+                console.error('Error resuming monitoring:', error);
+                alert('Error connecting to backend: ' + error.message);
+            }
+        }
+        
+        // Polling function for status updates
+        async function pollForUpdates() {
+            let pollCount = 0;
+            const maxPolls = 600; // 50 minutes max
+            
+            const pollStatus = async () => {
+                try {
+                    console.log(`Polling attempt ${pollCount + 1}/${maxPolls}...`);
+                    const statusResponse = await fetch('http://localhost:5000/api/data-pull-status');
+                    const status = await statusResponse.json();
+                    console.log('Status received:', status);
+                    
+                    // Update UI
+                    updateProgress(status.progress || 0, status.status_text || 'Processing...');
+                    document.getElementById('posts-downloaded').textContent = status.posts_downloaded || 0;
+                    document.getElementById('api-calls').textContent = status.api_calls || 0;
+                    document.getElementById('current-date').textContent = status.current_date || 'Calculating...';
+                    document.getElementById('current-status').textContent = status.status_text || 'Processing...';
+                    
+                    if (status.error) {
+                        throw new Error(status.error);
+                    }
+                    
+                    if (!status.in_progress && status.result) {
+                        // Completed successfully
+                        updateProgress(100, 'Data pull completed successfully!');
+                        
+                        // Hide progress section buttons
+                        document.getElementById('cancel-btn').style.display = 'none';
+                        document.getElementById('refresh-btn').style.display = 'none';
+                        
+                        setTimeout(() => {
+                            const startDate = document.getElementById('start-date').value || '2025-08-03';
+                            completeDataPull('mantle', startDate, null, status.result.posts, status.api_calls);
+                        }, 500);
+                        return;
+                    }
+                    
+                    if (status.in_progress && pollCount < maxPolls) {
+                        pollCount++;
+                        setTimeout(pollStatus, 5000); // Poll every 5 seconds
+                    } else if (!status.in_progress && !status.result) {
+                        // Process ended but no result - check if there's an error or incomplete state
+                        console.log('Process ended without result, status:', status);
+                        if (status.error) {
+                            throw new Error(status.error);
+                        } else {
+                            // Process might have ended unexpectedly
+                            throw new Error('Data pull ended unexpectedly without result');
+                        }
+                    } else if (pollCount >= maxPolls) {
+                        throw new Error('Monitoring timed out');
+                    }
+                    
+                } catch (pollError) {
+                    console.error('Polling error:', pollError);
+                    showErrorOutcome('Monitoring error: ' + pollError.message);
+                }
+            };
+            
+            // Start polling immediately
+            pollStatus();
+        }
+
+        // Refresh data pull status manually (recovery function)
+        async function refreshDataPullStatus() {
+            try {
+                console.log('Manual refresh requested...');
+                const statusResponse = await fetch('http://localhost:5000/api/data-pull-status');
+                const status = await statusResponse.json();
+                console.log('Manual refresh - status received:', status);
+                
+                // Calculate date-based progress for manual refresh too
+                const dateProgress = calculateDateBasedProgress(
+                    status.current_date, 
+                    document.getElementById('start-date').value || '2025-07-01',
+                    status.posts_downloaded || 0
+                );
+                
+                // Use date-based progress if available, otherwise use server progress
+                const finalProgress = status.current_date ? dateProgress : (status.progress || 0);
+                
+                // Update UI with current status
+                updateProgress(finalProgress, status.status_text || 'Checking...');
+                document.getElementById('posts-downloaded').textContent = status.posts_downloaded || 0;
+                document.getElementById('api-calls').textContent = status.api_calls || 0;
+                document.getElementById('current-date').textContent = status.current_date || 'Unknown';
+                document.getElementById('current-status').textContent = status.status_text || 'Checking...';
+                
+                // Check if process is complete
+                if (!status.in_progress && status.result) {
+                    console.log('Process completed! Showing success.');
+                    updateProgress(100, 'Data pull completed successfully!');
+                    
+                    // Hide progress section buttons and show completion UI
+                    document.getElementById('cancel-btn').style.display = 'none';
+                    document.getElementById('refresh-btn').style.display = 'none';
+                    
+                    setTimeout(() => {
+                        // Use saved values for completion
+                        const token = 'mantle';
+                        const startDate = document.getElementById('start-date').value || '2025-07-01';
+                        completeDataPull(token, startDate, null, status.result.posts, status.api_calls);
+                    }, 500);
+                } else if (!status.in_progress && status.error) {
+                    console.log('Process failed with error:', status.error);
+                    showErrorOutcome('Data pull failed: ' + status.error);
+                } else if (status.in_progress) {
+                    console.log('Process still in progress, resuming polling...');
+                    // Resume polling if still in progress
+                    pollForUpdates();
+                } else {
+                    console.log('Process in unknown state:', status);
+                    showErrorOutcome('Data pull ended in unknown state. Check logs for details.');
+                }
+                
+            } catch (error) {
+                console.error('Manual refresh failed:', error);
+                showErrorOutcome('Failed to refresh status: ' + error.message);
+            }
+        }
+
+        // Calculate date-based progress (JavaScript version)
+        function calculateDateBasedProgress(currentDate, startDate, postsDownloaded) {
+            try {
+                if (!currentDate || !startDate) {
+                    // Fallback to post-based progress
+                    return postsDownloaded <= 50 ? Math.min(90, postsDownloaded * 1.5) : Math.min(90, 75 + (postsDownloaded - 50) * 0.3);
+                }
+                
+                const today = new Date();
+                const targetDate = new Date(startDate);
+                
+                // Parse current tweet date (format: "2025-08-12 12:00")
+                let currentTweetDate;
+                try {
+                    // Try parsing full date-time format
+                    currentTweetDate = new Date(currentDate.replace(' ', 'T') + ':00Z');
+                } catch (e) {
+                    try {
+                        // Try parsing just the date part
+                        currentTweetDate = new Date(currentDate.split(' ')[0]);
+                    } catch (e2) {
+                        // Fallback to post-based progress
+                        return postsDownloaded <= 50 ? Math.min(90, postsDownloaded * 1.5) : Math.min(90, 75 + (postsDownloaded - 50) * 0.3);
+                    }
+                }
+                
+                // Calculate total time span in days
+                const totalDays = Math.floor((today - targetDate) / (1000 * 60 * 60 * 24));
+                if (totalDays <= 0) {
+                    return 100; // Already reached or passed target
+                }
+                
+                const daysRemaining = Math.floor((currentTweetDate - targetDate) / (1000 * 60 * 60 * 24));
+                if (daysRemaining <= 0) {
+                    return 100; // Reached target date
+                }
+                
+                // Calculate progress: 0% at today, 100% at target date
+                let progressPercent = ((totalDays - daysRemaining) / totalDays) * 100;
+                
+                // Ensure we don't exceed 100% and have some minimum progress if we have posts
+                if (postsDownloaded > 0) {
+                    progressPercent = Math.max(5, Math.min(100, progressPercent));
+                } else {
+                    progressPercent = Math.max(0, Math.min(100, progressPercent));
+                }
+                
+                return progressPercent;
+                
+            } catch (error) {
+                console.warn('Error calculating date-based progress:', error);
+                // Fallback to post-based progress
+                return postsDownloaded <= 50 ? Math.min(90, postsDownloaded * 1.5) : Math.min(90, 75 + (postsDownloaded - 50) * 0.3);
+            }
+        }
+
         // Start data pull process
         function startDataPull() {
             const token = document.getElementById('token-select').value;
             const startDate = document.getElementById('start-date').value;
-            const endDate = document.getElementById('end-date').value;
             
-            if (!startDate || !endDate) {
-                alert('Please select both start and end dates.');
-                return;
-            }
-            
-            if (new Date(startDate) > new Date(endDate)) {
-                alert('Start date must be before end date.');
+            if (!startDate) {
+                alert('Please select a start date.');
                 return;
             }
             
             const apiKey = localStorage.getItem('TWITTERAPI_IO_KEY');
             if (!apiKey) {
-                alert('Please configure your X.com Bearer Token first using "Check API Status".');
+                alert('Please configure your TwitterAPI.io API key first using "Check API Status".');
                 return;
             }
             
             // Start the data pull process
             dataPullInProgress = true;
             showProgressSection();
-            executeDataPull(token, startDate, endDate);
+            executeDataPull(token, startDate, null);
         }
         
         // Show progress section
@@ -1114,7 +1509,7 @@ if barstate.islast
             updateProgress(0, 'Initializing data pull...');
             document.getElementById('posts-downloaded').textContent = '0';
             document.getElementById('api-calls').textContent = '0';
-            document.getElementById('eta').textContent = 'Calculating...';
+            document.getElementById('current-date').textContent = 'Calculating...';
             document.getElementById('current-status').textContent = 'Starting...';
         }
         
@@ -1124,65 +1519,106 @@ if barstate.islast
             document.getElementById('progress-text').textContent = statusText;
         }
         
-        // Execute real data pull using X.com Official API
+        // Execute real data pull using backend API
         async function executeDataPull(token, startDate, endDate) {
             try {
-                updateProgress(10, 'Starting X.com API data pull...');
-                document.getElementById('current-status').textContent = 'Initializing API connection...';
+                updateProgress(5, 'Initializing data pull...');
+                document.getElementById('current-status').textContent = 'Connecting to backend...';
                 
                 // Check if API key is configured
                 const apiKey = localStorage.getItem('apiKey');
                 if (!apiKey) {
-                    throw new Error('X.com Bearer Token not configured. Please check API status first.');
+                    throw new Error('TwitterAPI.io API Key not configured. Please check API status first.');
                 }
                 
-                updateProgress(20, 'Calling X.com Official API...');
-                document.getElementById('current-status').textContent = 'Fetching tweets from X.com...';
+                // Start data pull via backend API
+                updateProgress(10, 'Starting backend data pull...');
+                const startResponse = await fetch('http://localhost:5000/api/start-data-pull', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        token: token,
+                        start_date: startDate,
+                        end_date: null,
+                        api_key: apiKey
+                    })
+                });
                 
-                // Map token to username
-                const tokenUsernames = {
-                    'mantle': 'Mantle_Official'
+                if (!startResponse.ok) {
+                    const errorData = await startResponse.json();
+                    throw new Error(errorData.error || 'Failed to start data pull');
+                }
+                
+                updateProgress(15, 'Backend processing started...');
+                document.getElementById('current-status').textContent = 'Backend is processing...';
+                
+                // Poll for status updates
+                let pollCount = 0;
+                const maxPolls = 600; // 50 minutes max (for large pulls)
+                
+                const pollStatus = async () => {
+                    try {
+                        const statusResponse = await fetch('http://localhost:5000/api/data-pull-status');
+                        const status = await statusResponse.json();
+                        
+                        // Update UI with real status from backend
+                        updateProgress(status.progress || 0, status.status_text || 'Processing...');
+                        document.getElementById('current-status').textContent = status.status_text || 'Processing...';
+                        document.getElementById('posts-downloaded').textContent = status.posts_downloaded || 0;
+                        document.getElementById('api-calls').textContent = status.api_calls || 0;
+                        document.getElementById('current-date').textContent = status.current_date || 'Calculating...';
+                        
+                        // Calculate ETA based on progress
+                        if (status.progress > 10) {
+                            const remainingTime = Math.max(0, Math.round((100 - status.progress) / 10));
+                            document.getElementById('eta').textContent = remainingTime > 0 ? `~${remainingTime}s remaining` : 'Almost done...';
+                        }
+                        
+                        if (status.error) {
+                            throw new Error(status.error);
+                        }
+                        
+                        if (!status.in_progress && status.result) {
+                            // Success!
+                            updateProgress(100, 'Data pull completed successfully!');
+                            document.getElementById('eta').textContent = 'Complete';
+                            
+                            setTimeout(() => {
+                                completeDataPull(token, startDate, endDate, status.result.posts, status.api_calls);
+                            }, 500);
+                            return;
+                        }
+                        
+                        if (status.in_progress && pollCount < maxPolls) {
+                            pollCount++;
+                            setTimeout(pollStatus, 5000); // Poll every 5 seconds
+                        } else if (!status.in_progress && !status.result) {
+                            // Process ended but no result - check if there's an error or incomplete state
+                            console.log('Process ended without result, status:', status);
+                            if (status.error) {
+                                throw new Error(status.error);
+                            } else {
+                                // Process might have ended unexpectedly
+                                throw new Error('Data pull ended unexpectedly without result');
+                            }
+                        } else if (pollCount >= maxPolls) {
+                            throw new Error('Data pull timed out');
+                        }
+                        
+                    } catch (pollError) {
+                        console.error('Polling error:', pollError);
+                        throw pollError;
+                    }
                 };
-                const username = tokenUsernames[token];
                 
-                updateProgress(30, 'Processing API response...');
-                document.getElementById('current-status').textContent = 'Processing tweets...';
-                
-                // Note: In a real implementation, you would need a backend endpoint
-                // to execute the Python script and return results
-                // For now, we'll simulate the response based on the expected output
-                
-                await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
-                
-                updateProgress(60, 'Filtering and cleaning data...');
-                document.getElementById('current-status').textContent = 'Applying filters...';
-                
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                
-                updateProgress(80, 'Saving to CSV file...');
-                document.getElementById('current-status').textContent = 'Saving data...';
-                
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                updateProgress(100, 'Data pull completed successfully!');
-                document.getElementById('current-status').textContent = 'Finalizing...';
-                
-                // Simulate realistic results
-                const postsDownloaded = Math.floor(Math.random() * 50) + 10; // 10-60 posts (realistic for filtered data)
-                const apiCalls = Math.floor(postsDownloaded / 12) + 1; // Realistic API calls
-                
-                // Update final stats
-                document.getElementById('posts-downloaded').textContent = postsDownloaded;
-                document.getElementById('api-calls').textContent = apiCalls;
-                document.getElementById('eta').textContent = 'Complete';
-                
-                setTimeout(() => {
-                    completeDataPull(token, startDate, endDate, postsDownloaded, apiCalls);
-                }, 500);
+                // Start polling
+                setTimeout(pollStatus, 2000); // Start polling after 2 seconds
                 
             } catch (error) {
                 console.error('Data pull failed:', error);
-                showErrorOutcome(error.message || 'Data pull failed. Please check your API configuration.');
+                showErrorOutcome(error.message || 'Data pull failed. Please check your backend connection.');
                 dataPullInProgress = false;
             }
         }
@@ -1191,19 +1627,21 @@ if barstate.islast
         function completeDataPull(token, startDate, endDate, postsDownloaded, apiCalls) {
             dataPullInProgress = false;
             
-            // Generate filename (use - instead of / to avoid creating folders in WSL)
-            const start = startDate.replace(/-/g, '-');
-            const end = endDate.replace(/-/g, '-');
-            const filename = `raw-Mantle-${start}-${end}.csv`;
-            
-            // Simulate success or error (90% success rate)
-            const success = Math.random() > 0.1;
-            
-            if (success) {
-                showSuccessOutcome(filename, postsDownloaded, apiCalls, token, startDate, endDate);
+            // Generate filename based on actual backend result
+            let filename;
+            if (endDate) {
+                const start = startDate.replace(/-/g, '-');
+                const end = endDate.replace(/-/g, '-');
+                filename = `raw-Mantle-${start}-${end}.csv`;
             } else {
-                showErrorOutcome('API quota exceeded. Please try again later or upgrade your API plan.');
+                // Single start date - use current date as end
+                const start = startDate.replace(/-/g, '-');
+                const today = new Date().toISOString().split('T')[0];
+                filename = `raw-Mantle-${start}-to-${today}.csv`;
             }
+            
+            // Always show success since we reached this point from successful backend completion
+            showSuccessOutcome(filename, postsDownloaded, apiCalls, token, startDate, endDate);
         }
         
         // Show success outcome
@@ -1221,9 +1659,18 @@ if barstate.islast
                 <div class="file-info">
                     <h5>📄 Generated File:</h5>
                     <p><strong>Filename:</strong> <code>${filename}</code></p>
-                    <p><strong>Location:</strong> <a href="#" class="file-link" onclick="viewRawFolder()">./raw/${filename}</a></p>
+                    <p><strong>Location:</strong> <a href="#" class="file-link" onclick="viewRawFolder()">./data/raw/${filename}</a></p>
                     <p><strong>Size:</strong> ~${Math.round(postsDownloaded * 0.8)} KB</p>
-                    <p><strong>Date Range:</strong> ${startDate} to ${endDate}</p>
+                    <p><strong>Date Range:</strong> ${startDate}${endDate ? ` to ${endDate}` : ' onwards'}</p>
+                </div>
+                
+                <div class="button-group" style="margin-top: 20px;">
+                    <button class="btn btn-success" onclick="viewRawFolder()" id="open-directory-btn">
+                        📁 Open Directory
+                    </button>
+                    <button class="btn btn-primary" onclick="startNewDataPull()" id="start-new-btn">
+                        🔄 Start New Pull
+                    </button>
                 </div>
                 
                 <div class="progress-stats">
@@ -1269,11 +1716,11 @@ if barstate.islast
                 <div class="file-info">
                     <h5>💡 Troubleshooting Tips:</h5>
                     <ul>
-                        <li>Check your X.com Bearer Token is valid</li>
+                        <li>Check your TwitterAPI.io API Key is valid</li>
                         <li>Verify your API plan has sufficient quota</li>
                         <li>Try a smaller date range</li>
                         <li>Check your internet connection</li>
-                        <li>Review X.com API dashboard for usage limits</li>
+                        <li>Review TwitterAPI.io dashboard for usage limits</li>
                     </ul>
                 </div>
             `;
@@ -1313,10 +1760,168 @@ if barstate.islast
         // View raw folder
         function viewRawFolder() {
             // In a real implementation, this would open the file explorer
-            alert('📁 Raw data folder: ./raw/\\n\\nIn a real implementation, this would open your file manager to the raw data folder.');
+            alert('📁 Raw data folder: ./data/raw/\\n\\nIn a real implementation, this would open your file manager to the raw data folder.');
+        }
+
+        // Start new data pull
+        function startNewDataPull() {
+            // Reset UI to initial state
+            document.getElementById('outcome-section').style.display = 'none';
+            document.getElementById('progress-section').style.display = 'none';
+            
+            // Reset form values
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('start-date').value = '2025-08-03';
+            
+            // Clear any previous data
+            dataPullInProgress = false;
+            
+            // Show data pull section
+            switchTab(null, 'data-pull-tab');
+            
+            alert('🔄 Ready for new data pull! Configure your settings and click "Start Data Pull" when ready.');
         }
         
-        // Process raw data
+        // Data Processing Functions
+        
+        // Refresh raw files list
+        async function refreshRawFiles() {
+            try {
+                const response = await fetch('http://localhost:5000/api/list-raw-files');
+                const result = await response.json();
+                
+                const select = document.getElementById('raw-file-select');
+                select.innerHTML = '<option value="">-- Select a file --</option>';
+                
+                if (result.files && result.files.length > 0) {
+                    result.files.forEach(file => {
+                        const option = document.createElement('option');
+                        option.value = file;
+                        option.textContent = file;
+                        select.appendChild(option);
+                    });
+                    console.log(`Found ${result.files.length} raw files`);
+                } else {
+                    console.log('No raw files found');
+                }
+            } catch (error) {
+                console.error('Error refreshing file list:', error);
+                alert('Error loading file list. Make sure backend is running.');
+            }
+        }
+        
+        // Start processing selected file
+        async function startProcessing() {
+            const selectedFile = document.getElementById('raw-file-select').value;
+            if (!selectedFile) {
+                alert('Please select a raw CSV file to process.');
+                return;
+            }
+            
+            try {
+                // Show progress section
+                document.getElementById('processing-progress-section').style.display = 'block';
+                document.getElementById('processing-results-section').style.display = 'none';
+                
+                // Reset progress
+                updateProcessingProgress(0, 'Starting thread consolidation...');
+                document.getElementById('threads-detected').textContent = '0';
+                document.getElementById('posts-consolidated').textContent = '0';
+                document.getElementById('processing-status').textContent = 'Processing...';
+                
+                // Start processing
+                const response = await fetch('http://localhost:5000/api/process-threads', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        filename: selectedFile
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Update progress to completion
+                    updateProcessingProgress(100, 'Thread consolidation completed!');
+                    document.getElementById('threads-detected').textContent = result.threads_detected || '0';
+                    document.getElementById('posts-consolidated').textContent = result.posts_consolidated || '0';
+                    document.getElementById('processing-status').textContent = 'Complete';
+                    
+                    // Show results
+                    setTimeout(() => {
+                        showProcessingResults(result);
+                    }, 1000);
+                } else {
+                    throw new Error(result.error || 'Processing failed');
+                }
+                
+            } catch (error) {
+                console.error('Processing error:', error);
+                updateProcessingProgress(0, 'Processing failed');
+                document.getElementById('processing-status').textContent = 'Failed';
+                alert('Processing failed: ' + error.message);
+            }
+        }
+        
+        // Update processing progress
+        function updateProcessingProgress(percentage, statusText) {
+            document.getElementById('processing-progress-fill').style.width = percentage + '%';
+            document.getElementById('processing-progress-text').textContent = statusText;
+        }
+        
+        // Show processing results
+        function showProcessingResults(result) {
+            document.getElementById('processing-progress-section').style.display = 'none';
+            document.getElementById('processing-results-section').style.display = 'block';
+            
+            const resultsContent = document.getElementById('processing-results-content');
+            resultsContent.innerHTML = `
+                <div class="outcome-success">
+                    <h4>✅ Thread Consolidation Completed!</h4>
+                    <p>Successfully processed <strong>${result.total_posts || 0} posts</strong> from <strong>${result.input_file}</strong></p>
+                </div>
+                
+                <div class="file-info">
+                    <h5>📄 Generated File:</h5>
+                    <p><strong>Filename:</strong> <code>${result.output_file || 'processed file'}</code></p>
+                    <p><strong>Location:</strong> <span class="file-link">./data/processed/${result.output_file || ''}</span></p>
+                    <p><strong>Format:</strong> CSV with 3 columns (tweet_id, timestamp, text)</p>
+                    <p><strong>Threads Detected:</strong> ${result.threads_detected || 0}</p>
+                    <p><strong>Posts After Consolidation:</strong> ${result.posts_consolidated || 0}</p>
+                </div>
+                
+                <div class="button-group" style="margin-top: 20px;">
+                    <button class="btn btn-success" onclick="viewProcessedFolder()" id="view-processed-btn">
+                        📁 View Processed Files
+                    </button>
+                    <button class="btn btn-primary" onclick="processAnotherFile()" id="process-another-btn">
+                        🔄 Process Another File
+                    </button>
+                </div>
+            `;
+        }
+        
+        // View processed folder
+        function viewProcessedFolder() {
+            alert('📁 Processed data folder: ./data/processed/\\n\\nIn a real implementation, this would open your file manager to the processed data folder.');
+        }
+        
+        // Process another file
+        function processAnotherFile() {
+            // Reset to file selection
+            document.getElementById('processing-results-section').style.display = 'none';
+            document.getElementById('processing-progress-section').style.display = 'none';
+            
+            // Clear selection
+            document.getElementById('raw-file-select').value = '';
+            
+            // Refresh file list
+            refreshRawFiles();
+        }
+        
+        // Process raw data (legacy function)
         function processRawData() {
             if (confirm('Process the raw data with current evaluation criteria?')) {
                 alert('🔄 Processing raw data...\\n\\nThis would run the evaluation script on the raw CSV file and update the results.');
@@ -1325,6 +1930,46 @@ if barstate.islast
                     alert('✅ Raw data processed successfully! Check the Results tab for updated analysis.');
                     loadResults(); // Refresh results
                 }, 2000);
+            }
+        }
+        
+        // Initialize data processing tab
+        function initializeDataProcessing() {
+            refreshRawFiles();
+            refreshProcessedFiles();
+        }
+        
+        // Refresh processed files list
+        async function refreshProcessedFiles() {
+            try {
+                const response = await fetch('http://localhost:5000/api/list-processed-files');
+                const result = await response.json();
+                
+                const select = document.getElementById('processed-file-select');
+                
+                if (result.files && result.files.length > 0) {
+                    // Clear existing options except the first one
+                    select.innerHTML = '<option value="">Select a processed file...</option>';
+                    
+                    // Add processed files
+                    result.files.forEach(filename => {
+                        const option = document.createElement('option');
+                        option.value = filename;
+                        option.textContent = filename;
+                        select.appendChild(option);
+                    });
+                    
+                    document.getElementById('file-selection-status').innerHTML = 
+                        `<div class="alert alert-success">Found ${result.files.length} processed file(s)</div>`;
+                } else {
+                    select.innerHTML = '<option value="">No processed files found</option>';
+                    document.getElementById('file-selection-status').innerHTML = 
+                        '<div class="alert alert-warning">No processed files found. Process some raw data first.</div>';
+                }
+            } catch (error) {
+                console.error('Error refreshing processed files:', error);
+                document.getElementById('file-selection-status').innerHTML = 
+                    '<div class="alert alert-danger">Error loading processed files</div>';
             }
         }
     </script>
